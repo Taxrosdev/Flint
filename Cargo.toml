@@ -20,7 +20,7 @@ ed25519-dalek = { version = "=3.0.0-pre.3", features = [
     "pkcs8",
     "signature",
 ] }
-reqwest = { version = "0.12.25", optional = true, default-features = false, features = [
+reqwest = { version = "0.12.26", optional = true, default-features = false, features = [
     "http2",
     "gzip",
     "brotli",
@@ -45,6 +45,7 @@ filetime = "0.2.26"
 liblzma = { version = "0.4.5", features = ["static"] }
 bzip2 = { version = "0.6.1", features = ["static"] }
 getrandom = { version = "0.3.4", features = ["std"] }
+syncstream = { git = "https://github.com/TimelessOS/syncstream.git", rev = "9bc82a69bbfb10359458d8db775fb9f0cdc99274" }
 
 [dev-dependencies]
 httpmock = "0.8.2"
