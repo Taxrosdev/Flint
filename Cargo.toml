@@ -20,7 +20,7 @@ ed25519-dalek = { version = "=3.0.0-pre.3", features = [
     "pkcs8",
     "signature",
 ] }
-reqwest = { version = "0.12.26", optional = true, default-features = false, features = [
+reqwest = { version = "0.13.1", optional = true, default-features = false, features = [
     "http2",
     "gzip",
     "brotli",
