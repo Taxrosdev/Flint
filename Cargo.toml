@@ -11,7 +11,7 @@ default-run = "flint"
 
 [dependencies]
 anyhow = "1.0.100"
-blake3 = { version = "1.8.2", features = ["digest"] }
+blake3 = { version = "1.8.3", features = ["digest"] }
 clap = { version = "4.5.54", features = ["derive"] }
 comfy-table = "7.2.1"
 directories = "6.0.0"
