@@ -1,3 +1,5 @@
+pub mod build;
+
 use anyhow::{Result, bail};
 use std::{
     fs,

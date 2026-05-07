@@ -2,10 +2,8 @@ use anyhow::{Result, bail};
 use std::{fs, path::Path};
 use walkdir::WalkDir;
 
-use crate::{
-    bundle::pad_header,
-    repo::{get_installed_package, read_manifest},
-};
+use super::pad_header;
+use crate::repo::{get_installed_package, read_manifest};
 
 /// The Repository should ONLY have 1 package.
 ///

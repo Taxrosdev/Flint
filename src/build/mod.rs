@@ -1,4 +1,3 @@
-pub mod bundle;
 pub mod hash;
 mod sources;
 
