@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use std::path::Path;
 use std::{env::var_os, path::PathBuf};
 
-use crate::{commands::main_commands, log::add_to_path_notice};
+use crate::commands::main_commands;
 use flintpkg::config::{
     get_system_chunks_dir, get_system_quicklaunch_dir, get_system_repos_dir, get_user_chunks_dir,
     get_user_quicklaunch_dir, get_user_repos_dir,
@@ -184,7 +184,7 @@ async fn main() -> Result<()> {
             .to_string_lossy()
             .contains(&*quicklaunch_path.to_string_lossy())
     {
-        add_to_path_notice(quicklaunch_path);
+        log::add_to_path_notice(quicklaunch_path);
     }
 
     Ok(())
