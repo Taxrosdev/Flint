@@ -1,17 +1,18 @@
-id: "example_package"
-aliases: ["example"]
+id: "flintpkg"
+aliases: ["flint"]
 edition: 2025
 
 metadata:
-  name: "Example Package"
-  description: "This is an example package. It should include the entire Flint source Repository."
+  name: "Flintpkg"
+  description: "The universal package manager"
   license: "MIT or APACHE-2.0"
   homepage_url: "https://github.com/TimelessOS/Flint"
 
-directory: target/debug
+directory: target/release/flint
 build_script: build.sh
 commands: ["flint"]
 
 sources:
   - kind: local
     url: ./
+
