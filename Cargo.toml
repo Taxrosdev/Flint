@@ -45,7 +45,6 @@ filetime = "0.2"
 liblzma = { version = "0.4", features = ["static"] }
 bzip2 = { version = "0.6", features = ["static"] }
 getrandom = { version = "0.4", features = ["std"] }
-syncstream = { git = "https://github.com/TimelessOS/syncstream.git", rev = "9bc82a69bbfb10359458d8db775fb9f0cdc99274" }
 
 [dev-dependencies]
 httpmock = "0.8"
