@@ -10,45 +10,45 @@ edition = "2024"
 default-run = "flint"
 
 [dependencies]
-anyhow = "1.0.100"
-blake3 = { version = "1.8.3", features = ["digest"] }
-clap = { version = "4.5.54", features = ["derive"] }
-comfy-table = "7.2.1"
-directories = "6.0.0"
-ed25519-dalek = { version = "=3.0.0-pre.3", features = [
+anyhow = "1.0"
+blake3 = { version = "1.8", features = ["digest"] }
+clap = { version = "4.5", features = ["derive"] }
+comfy-table = "7.2"
+directories = "6.0"
+ed25519-dalek = { version = "3.0", features = [
     "pem",
     "pkcs8",
     "signature",
 ] }
-reqwest = { version = "0.13.1", optional = true, default-features = false, features = [
+reqwest = { version = "0.13", optional = true, default-features = false, features = [
     "http2",
     "gzip",
     "brotli",
     "system-proxy",
 ] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_yaml = "0.9.34"
-tar = "0.4.44"
-tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
-tokio-stream = { version = "0.1.17", features = ["sync"] }
-temp-dir = "0.1.16"
-walkdir = "2.5.0"
-dialoguer = { version = "0.12.0" }
-flate2 = { version = "1.1.5", optional = true }
-console = { version = "0.16.2", default-features = false, features = [
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+tar = "0.4"
+tokio = { version = "1.49", features = ["macros", "rt-multi-thread"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+temp-dir = "0.2"
+walkdir = "2.5"
+dialoguer = { version = "0.12" }
+flate2 = { version = "1.1", optional = true }
+console = { version = "0.16", default-features = false, features = [
     "ansi-parsing",
     "std",
     "windows-console-colors",
 ] }
-futures-util = "0.3.31"
-filetime = "0.2.26"
-liblzma = { version = "0.4.5", features = ["static"] }
-bzip2 = { version = "0.6.1", features = ["static"] }
-getrandom = { version = "0.3.4", features = ["std"] }
+futures-util = "0.3"
+filetime = "0.2"
+liblzma = { version = "0.4", features = ["static"] }
+bzip2 = { version = "0.6", features = ["static"] }
+getrandom = { version = "0.4", features = ["std"] }
 syncstream = { git = "https://github.com/TimelessOS/syncstream.git", rev = "9bc82a69bbfb10359458d8db775fb9f0cdc99274" }
 
 [dev-dependencies]
-httpmock = "0.8.2"
+httpmock = "0.8"
 
 [features]
 network = ["dep:reqwest", "dep:flate2"]
@@ -68,7 +68,7 @@ suspicious = "deny"
 perf = "deny"
 complexity = "deny"
 style = "warn"
-# cargo = "deny" # Temporarily disabled because we use a prerelease version of ed25519, and blake3 is not using the same deps.
+cargo = "deny"
 pedantic = "warn"
 nursery = "warn"
 
