@@ -131,7 +131,7 @@ pub fn get_package(repo_manifest: &RepoManifest, package_id: &str) -> Result<Pac
         }
     }
 
-    bail!("Could not find package '{package_id}' found in Repository.",);
+    bail!("Could not find package '{package_id}' found in Repository.");
 }
 
 /// Gets an installed package manifest from a repository.
@@ -153,7 +153,7 @@ pub fn get_installed_package(repo_path: &Path, id: &str) -> Result<PackageManife
                 .join(&package.id)
                 .join("install.meta");
             if !installed_path.exists() {
-                bail!("Package '{}' is not installed.", &package.id)
+                bail!("Package '{}' is not installed.", package.id)
             }
 
             let package_manifest_serialized = fs::read_to_string(installed_path)?;

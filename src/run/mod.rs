@@ -55,7 +55,7 @@ pub fn start<S: AsRef<OsStr>>(
 
         for key in keys_to_update {
             if let Some(value) = envs.get_mut(&key) {
-                *value = value.replace("./", &format!("{}/", &installed_path.to_string_lossy()));
+                *value = value.replace("./", &format!("{}/", installed_path.display()));
             }
         }
 

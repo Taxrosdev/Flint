@@ -18,7 +18,7 @@ pub async fn install_chunk(
 ) -> Result<()> {
     let chunk_name = get_chunk_filename(&chunk.hash, chunk.permissions);
     let chunk_path = chunk_store_path.join(&chunk_name);
-    let tmp_chunk_path = chunk_store_path.join(format!("{}.tmp", &chunk_name));
+    let tmp_chunk_path = chunk_store_path.join(format!("{chunk_name}.tmp"));
 
     if chunk_path.exists() {
         return Ok(());
@@ -76,13 +76,13 @@ pub async fn install_chunks(
                         Err(err) => {
                             eprintln!(
                                 "Failed to fetch chunk {} from mirror {mirror}: {err}",
-                                &chunk.hash
+                                chunk.hash
                             );
                         }
                     }
                 }
 
-                bail!("All mirrors failed for chunk {}", &chunk.hash);
+                bail!("All mirrors failed for chunk {}", chunk.hash);
             }
         })
         .buffer_unordered(8) // run up to 8 downloads at once
