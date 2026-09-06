@@ -139,19 +139,10 @@ pub fn get_build_cache_dir() -> Result<PathBuf> {
 #[must_use]
 /// Gets the SYSTEM-WIDE Repositorys path
 fn get_system_data_dir() -> PathBuf {
-    #[cfg(target_os = "linux")]
-    {
-        PathBuf::from("/var/lib/flint")
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        PathBuf::from("/Library/Application Support/flint")
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        PathBuf::from(r"C:\ProgramData\Flint")
+    cfg_select! {
+        unix => PathBuf::from("/var/lib/flint"),
+        target_os = "macos" => PathBuf::from("/Library/Application Support/flint"),
+        target_os = "windows" => PathBuf::from(r"C:\ProgramData\Flint")
     }
 }
 
