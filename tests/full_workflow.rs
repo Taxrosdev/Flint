@@ -3,7 +3,7 @@ use std::path::Path;
 use temp_dir::TempDir;
 
 use flintpkg::{
-    build::build,
+    build::BuildManifest,
     repo::{create_repo, get_installed_package},
     run::{install_package, start},
 };
@@ -19,7 +19,10 @@ async fn full_workflow_test() -> Result<()> {
     create_repo(repo_path, None)?;
 
     let build_manifest_path = Path::new("build_manifest.yml");
-    build(build_manifest_path, repo_path, None, chunks_path).await?;
+    let build_manifest = BuildManifest::load(build_manifest_path)?;
+    build_manifest
+        .build(build_manifest_path, repo_path, None, chunks_path)
+        .await?;
 
     install_package(repo_path, "example", chunks_path).await?;
 

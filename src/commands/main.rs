@@ -6,7 +6,7 @@ use std::{
 };
 
 use flintpkg::{
-    build::{build, force_build},
+    build::BuildManifest,
     chunks::{utils::clean_unused, verify_all_chunks},
     repo::{
         PackageManifest, get_package, read_manifest,
@@ -24,11 +24,16 @@ pub async fn build_cmd(
     force: bool,
 ) -> Result<()> {
     let repo_path = resolve_repo(base_path, repo_name)?;
+    let build_manifest = BuildManifest::load(build_manifest_path)?;
 
     if force {
-        force_build(build_manifest_path, &repo_path, None, chunk_store_path).await?;
+        build_manifest
+            .force_build(build_manifest_path, &repo_path, None, chunk_store_path)
+            .await?;
     } else {
-        build(build_manifest_path, &repo_path, None, chunk_store_path).await?;
+        build_manifest
+            .build(build_manifest_path, &repo_path, None, chunk_store_path)
+            .await?;
     }
 
     clean_unused(base_path, chunk_store_path)?;
