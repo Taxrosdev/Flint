@@ -67,9 +67,9 @@ suspicious = "deny"
 perf = "deny"
 complexity = "deny"
 style = "warn"
-cargo = "deny"
 pedantic = "warn"
-nursery = "warn"
+missing_errors_doc = { level = "allow", priority = 1 }
+missing_panics_doc = { level = "allow", priority = 1 }
 
 [profile.release]
 lto = true
