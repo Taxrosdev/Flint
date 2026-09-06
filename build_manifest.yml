@@ -8,11 +8,10 @@ metadata:
   license: "MIT or APACHE-2.0"
   homepage_url: "https://github.com/TimelessOS/Flint"
 
-directory: target/release/flint
+output: target/release/flint
 build_script: build.sh
 commands: ["flint"]
 
 sources:
   - kind: local
     url: ./
-

@@ -30,8 +30,8 @@ struct BuildManifest {
     /// A list of commands that this will give access to
     #[serde(default)]
     commands: Vec<PathBuf>,
-    /// Directory relative to the manifest
-    directory: PathBuf,
+    /// Directory/File output relative to the manifest
+    output: PathBuf,
     /// Edition
     edition: String,
     /// Script to be run before packaging
@@ -157,7 +157,7 @@ pub async fn force_build(
         run_script(build_dir.path(), search_path, &script).with_context(|| "build_script")?;
     }
 
-    let out_dir = build_dir.path().join(&build_manifest.directory);
+    let out_dir = build_dir.path().join(&build_manifest.output);
 
     if let Some(script) = build_manifest.post_script {
         run_script(&out_dir, search_path, &script).with_context(|| "post_script")?;
