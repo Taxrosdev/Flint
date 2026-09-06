@@ -45,6 +45,7 @@ filetime = "0.2"
 liblzma = { version = "0.4", features = ["static"] }
 bzip2 = { version = "0.6", features = ["static"] }
 getrandom = { version = "0.4", features = ["std"] }
+nix = { version = "0.31.3", features = ["fs", "mount", "sched"] }
 
 [dev-dependencies]
 httpmock = "0.8"
@@ -57,7 +58,6 @@ name = "flint"
 path = "src/main.rs"
 
 [lints.rust]
-unsafe_code = "forbid"
 unused_imports = "deny"
 
 [lints.clippy]

@@ -30,6 +30,7 @@ pub struct BuildManifest {
     #[serde(default)]
     commands: Vec<PathBuf>,
     /// Directory/File output relative to the manifest
+    #[serde(rename(deserialize = "directories"))]
     output: PathBuf,
     /// Edition
     edition: String,

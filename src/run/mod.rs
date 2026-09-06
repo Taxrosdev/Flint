@@ -1,4 +1,5 @@
 pub mod quicklaunch;
+pub mod sandbox;
 
 use anyhow::{Context, Result, bail};
 use std::{
