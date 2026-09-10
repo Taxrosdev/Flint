@@ -105,15 +105,13 @@ impl BuildManifest {
             );
         }
 
-        let build_manifest_path = build_manifest_path.canonicalize()?;
-        let search_path = if build_manifest_path.is_dir() {
-            &build_manifest_path
-        } else {
-            build_manifest_path.parent().expect("file has no parent?")
-        };
-
-        self.force_build(search_path, repo_path, config_path, chunk_store_path)
-            .await
+        self.force_build(
+            build_manifest_path,
+            repo_path,
+            config_path,
+            chunk_store_path,
+        )
+        .await
     }
 
     /// Builds and inserts a package into a Repository from a `build_manifest`
@@ -124,11 +122,19 @@ impl BuildManifest {
     /// - Build Script Failure
     pub async fn force_build(
         &self,
-        search_path: &Path,
+        build_manifest_path: &Path,
         repo_path: &Path,
         config_path: Option<&Path>,
         chunk_store_path: &Path,
     ) -> Result<PackageManifest> {
+        // Get search path
+        let build_manifest_path = build_manifest_path.canonicalize()?;
+        let search_path = if build_manifest_path.is_dir() {
+            &build_manifest_path
+        } else {
+            build_manifest_path.parent().expect("file has no parent?")
+        };
+
         let build_dir = TempDir::new()?;
 
         let repo_manifest =
