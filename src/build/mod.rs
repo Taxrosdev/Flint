@@ -6,14 +6,14 @@ use std::{
     collections::HashMap,
     fs, io,
     path::{Path, PathBuf},
-    process::Command,
 };
 use temp_dir::TempDir;
 
 use crate::{
     chunks::{load_tree, save_tree},
     crypto::key::{get_private_key, serialize_verifying_key},
-    repo::{Metadata, PackageManifest, get_package, insert_package, read_manifest},
+    repo::{Metadata, PackageManifest, SandboxConfig, get_package, insert_package, read_manifest},
+    run::sandbox::{DEFAULT_SANDBOX_PATH, ExitReason, Mount, Sandbox},
 };
 use sources::get_sources;
 
@@ -30,7 +30,7 @@ pub struct BuildManifest {
     #[serde(default)]
     commands: Vec<PathBuf>,
     /// Directory/File output relative to the manifest
-    #[serde(rename(deserialize = "directories"))]
+    #[serde(alias = "directories")]
     output: PathBuf,
     /// Edition
     edition: String,
@@ -51,6 +51,8 @@ pub struct BuildManifest {
     /// RUNTIME environment variables
     #[serde(default)]
     env: HashMap<String, String>,
+    #[serde(default)]
+    sandbox: SandboxConfig,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
@@ -103,13 +105,15 @@ impl BuildManifest {
             );
         }
 
-        self.force_build(
-            build_manifest_path,
-            repo_path,
-            config_path,
-            chunk_store_path,
-        )
-        .await
+        let build_manifest_path = build_manifest_path.canonicalize()?;
+        let search_path = if build_manifest_path.is_dir() {
+            &build_manifest_path
+        } else {
+            build_manifest_path.parent().expect("file has no parent?")
+        };
+
+        self.force_build(search_path, repo_path, config_path, chunk_store_path)
+            .await
     }
 
     /// Builds and inserts a package into a Repository from a `build_manifest`
@@ -144,13 +148,31 @@ impl BuildManifest {
         )?;
 
         if let Some(script) = &self.build_script {
-            run_script(build_dir.path(), search_path, script).with_context(|| "build_script")?;
+            run_script(
+                build_dir.path().to_path_buf(),
+                search_path,
+                script,
+                &envs,
+                true,
+            )
+            .with_context(|| "build_script")?;
         }
 
         let out_dir = build_dir.path().join(&self.output);
 
         if let Some(script) = &self.post_script {
-            run_script(&out_dir, search_path, script).with_context(|| "post_script")?;
+            run_script(out_dir.clone(), search_path, script, &envs, false)
+                .with_context(|| "post_script")?;
+
+            //            let result = Command::new("sh")
+            //              .arg("-c")
+            //            .arg(script_path)
+            //          .current_dir(cwd)
+            //        .status()?;
+
+            //  if !result.success() {
+            //    bail!("Build script failed.")
+            //}
         }
 
         let mut included_chunks = Vec::new();
@@ -176,6 +198,7 @@ impl BuildManifest {
             chunks: included_chunks,
             env: None,
             build_hash: self.build_hash(repo_path)?,
+            sandbox: self.sandbox.clone(),
         };
 
         if !envs.is_empty() {
@@ -236,18 +259,32 @@ fn include(
 }
 
 /// Runs a script (typically `post_script` or `build_script`)
-fn run_script(cwd: &Path, search_path: &Path, script: &Path) -> Result<()> {
+fn run_script(
+    cwd: PathBuf,
+    search_path: &Path,
+    script: &Path,
+    envs: &HashMap<String, String>,
+    sandboxed: bool,
+) -> Result<()> {
     let script_path = search_path.join(script);
 
-    let result = Command::new("sh")
-        .arg("-c")
-        .arg(script_path)
-        .current_dir(cwd)
-        .status()?;
+    let mut sandbox = Sandbox::create()?;
+    sandbox.set_current_dir(DEFAULT_SANDBOX_PATH.to_path_buf());
+    sandbox.add_mount(Mount {
+        host_path: cwd,
+        sandbox_path: DEFAULT_SANDBOX_PATH.to_path_buf(),
+    });
+    let result = if sandboxed {
+        sandbox.run_sandboxed("sh", &[PathBuf::from("-c"), script_path], envs)?
+    } else {
+        sandbox.run_unsandboxed("sh", &[PathBuf::from("-c"), script_path], envs)?
+    };
 
-    if !result.success() {
-        bail!("Build script failed.")
+    match result {
+        ExitReason::Signal(sig) => bail!("Build script failed with signal {sig}"),
+        ExitReason::Code(0) => Ok(()),
+        ExitReason::Code(exit_code) => {
+            bail!("Build script failed with exit code {exit_code}")
+        }
     }
-
-    Ok(())
 }

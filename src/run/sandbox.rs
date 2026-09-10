@@ -9,18 +9,22 @@ use nix::{
     },
 };
 use std::{
+    collections::HashMap,
+    ffi::OsStr,
     io,
+    os::unix::process::ExitStatusExt,
     path::{Path, PathBuf},
     process::{Command, ExitStatus},
     ptr::addr_of_mut,
+    sync::LazyLock,
 };
-use temp_dir::TempDir;
+
+pub static DEFAULT_SANDBOX_PATH: LazyLock<&Path> =
+    LazyLock::new(|| Path::new("/tmp/flint-runtime/"));
 
 pub struct Sandbox {
     mounts: Vec<Mount>,
-    /// Should be a temporary directory somewhere.
-    tmp_root: PathBuf,
-    _tmp_root_owner: TempDir,
+    cwd: Option<PathBuf>,
 }
 
 pub struct Mount {
@@ -28,14 +32,34 @@ pub struct Mount {
     pub sandbox_path: PathBuf,
 }
 
+pub enum ExitReason {
+    Code(i32),
+    Signal(i32),
+}
+
+impl ExitReason {
+    #[must_use]
+    pub fn success(&self) -> bool {
+        matches!(self, ExitReason::Code(0))
+    }
+}
+
+impl From<ExitStatus> for ExitReason {
+    fn from(value: ExitStatus) -> Self {
+        if let Some(code) = value.code() {
+            return Self::Code(code);
+        }
+
+        // Processes can either exit with a code, or a signal.
+        Self::Signal(value.signal().unwrap())
+    }
+}
+
 impl Sandbox {
     pub fn create() -> io::Result<Self> {
-        let tmp_dir = TempDir::new()?;
-
         Ok(Self {
             mounts: Vec::new(),
-            tmp_root: tmp_dir.path().to_path_buf(),
-            _tmp_root_owner: tmp_dir,
+            cwd: None,
         })
     }
 
@@ -43,18 +67,32 @@ impl Sandbox {
         self.mounts.push(mount);
     }
 
-    pub fn run_sandboxed(self, exec: &str) -> io::Result<i32> {
+    pub fn set_current_dir(&mut self, path: PathBuf) {
+        self.cwd = Some(path);
+    }
+
+    pub fn run_sandboxed<S: AsRef<OsStr>, K: AsRef<OsStr> + Clone, V: AsRef<OsStr> + Clone>(
+        self,
+        exec: impl AsRef<OsStr>,
+        args: &[S],
+        envs: &HashMap<K, V>,
+    ) -> io::Result<ExitReason> {
         // 4 MB
         let mut stack = vec![0u8; 4 * 1024 * 1024].into_boxed_slice();
         let flags = CloneFlags::CLONE_NEWNS
             | CloneFlags::CLONE_NEWIPC
             | CloneFlags::CLONE_NEWNET
             | CloneFlags::CLONE_NEWPID
-            | CloneFlags::CLONE_NEWUTS;
+            | CloneFlags::CLONE_NEWUTS
+            | CloneFlags::CLONE_NEWUSER;
         let entrypoint = Box::new(|| {
             self.setup_child();
-            self.run_unsandboxed(exec).unwrap();
-            0
+            let exit = self.run_unsandboxed(&exec, args, envs.clone()).unwrap();
+            let code = match exit {
+                ExitReason::Code(code) => code,
+                ExitReason::Signal(sig) => 128 + sig,
+            };
+            code as isize
         });
 
         let pid =
@@ -62,13 +100,33 @@ impl Sandbox {
         let status = waitpid(pid, None).unwrap();
 
         match status {
-            WaitStatus::Exited(_, code) => Ok(code),
-            _ => todo!(),
+            WaitStatus::Exited(_, code) => Ok(ExitReason::Code(code)),
+            WaitStatus::Signaled(_, sig, _) => Ok(ExitReason::Signal(sig as i32)),
+            _ => unimplemented!(), // These are unrepresentable and implausible.
         }
     }
 
-    pub fn run_unsandboxed(&self, exec: &str) -> io::Result<ExitStatus> {
-        std::process::Command::new(exec).status()
+    pub fn run_unsandboxed<
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+        E: IntoIterator<Item = (K, V)>,
+        K: AsRef<OsStr>,
+        V: AsRef<OsStr>,
+    >(
+        &self,
+        exec: impl AsRef<OsStr>,
+        args: I,
+        envs: E,
+    ) -> io::Result<ExitReason> {
+        if let Some(cwd) = &self.cwd {
+            std::env::set_current_dir(cwd).expect("could not set current directory in sandbox");
+        }
+
+        Ok(std::process::Command::new(exec)
+            .args(args)
+            .envs(envs)
+            .status()?
+            .into())
     }
 
     fn setup_child(&self) {
@@ -78,22 +136,20 @@ impl Sandbox {
         // Setup Loopback
         Self::setup_lo().expect("Loopback error");
 
-        // Create the new root
-        Self::clone_root(&self.tmp_root).expect("Root clone creation error");
         for mount_request in &self.mounts {
+            std::fs::create_dir_all(&mount_request.sandbox_path)
+                .expect("could not create sandbox path for mount");
+
             // Mount every requested mount
             mount(
                 Some(&mount_request.host_path),
-                &self.tmp_root.join(&mount_request.sandbox_path),
+                &mount_request.sandbox_path,
                 None::<&str>,
                 MsFlags::MS_BIND | MsFlags::MS_REC | MsFlags::MS_SLAVE,
                 None::<&str>,
             )
             .expect("could not setup requested mount");
         }
-
-        // Pivot Root
-        Self::pivot_root().expect("Root setup error");
     }
 
     fn setup_lo() -> io::Result<()> {
@@ -101,24 +157,5 @@ impl Sandbox {
             .args(["link", "set", "lo", "up"])
             .output()?;
         Ok(())
-    }
-
-    fn clone_root(new_root: &Path) -> io::Result<()> {
-        for entry in std::fs::read_dir("/")? {
-            let entry = entry?;
-            mount(
-                Some(entry.file_name().as_os_str()),
-                &new_root.join(entry.file_name()),
-                None::<&str>,
-                MsFlags::MS_BIND | MsFlags::MS_REC | MsFlags::MS_SLAVE,
-                None::<&str>,
-            )?;
-        }
-
-        Ok(())
-    }
-
-    fn pivot_root() -> io::Result<()> {
-        todo!()
     }
 }

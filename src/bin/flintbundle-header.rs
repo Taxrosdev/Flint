@@ -1,5 +1,9 @@
 use anyhow::{Context, Result};
-use flintpkg::{bundle::extract_bundle, repo::read_manifest, run::start};
+use flintpkg::{
+    bundle::extract_bundle,
+    repo::read_manifest,
+    run::{sandbox::ExitReason, start},
+};
 use std::{
     env::{self, current_exe},
     process::exit,
@@ -23,19 +27,12 @@ fn main() -> Result<()> {
         repo_path,
         package_manifest.clone(),
         entrypoint.to_str().unwrap(),
-        env::args().collect(),
+        &env::args().collect::<Vec<_>>(),
     )
     .with_context(|| "Could not run bundle")?;
 
-    if !exit_code.success() {
-        match exit_code.code() {
-            Some(code) => {
-                println!("Exited with status code: {code}");
-                exit(code);
-            }
-            None => println!("Process terminated by signal"),
-        }
+    match exit_code {
+        ExitReason::Code(code) => exit(code),
+        ExitReason::Signal(sig) => exit(sig),
     }
-
-    Ok(())
 }

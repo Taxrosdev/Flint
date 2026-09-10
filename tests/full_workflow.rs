@@ -18,22 +18,22 @@ async fn full_workflow_test() -> Result<()> {
 
     create_repo(repo_path, None)?;
 
-    let build_manifest_path = Path::new("build_manifest.yml");
-    let build_manifest = BuildManifest::load(build_manifest_path)?;
+    let build_manifest_path = Path::new("build_manifest.yml").canonicalize().unwrap();
+    let build_manifest = BuildManifest::load(&build_manifest_path)?;
     build_manifest
-        .build(build_manifest_path, repo_path, None, chunks_path)
+        .build(&build_manifest_path, repo_path, None, chunks_path)
         .await?;
 
-    install_package(repo_path, "example", chunks_path).await?;
+    install_package(repo_path, "flintpkg", chunks_path).await?;
 
-    let manifest = get_installed_package(repo_path, "example")?;
+    let manifest = get_installed_package(repo_path, "flint")?;
 
     let args: Vec<&str> = vec!["--help"];
-    let result = start(repo_path, manifest.clone(), "flint", args)?;
+    let result = start(repo_path, manifest.clone(), "flint", &args)?;
     assert!(result.success());
 
     let args: Vec<&str> = vec![];
-    let result = start(repo_path, manifest, "flint", args)?;
+    let result = start(repo_path, manifest, "flint", &args)?;
     assert!(!result.success());
 
     Ok(())

@@ -6,14 +6,16 @@ use std::{
     collections::HashMap,
     ffi::OsStr,
     path::{Path, PathBuf},
-    process::{Command, ExitStatus},
 };
 
 #[cfg(feature = "network")]
 use crate::chunks::install_tree;
-use crate::repo::{
-    PackageManifest, get_package, read_manifest,
-    versions::{install_version, switch_version},
+use crate::{
+    repo::{
+        PackageManifest, get_package, read_manifest,
+        versions::{install_version, switch_version},
+    },
+    run::sandbox::{ExitReason, Mount, Sandbox},
 };
 
 /// Starts a package from an entrypoint
@@ -28,8 +30,8 @@ pub fn start<S: AsRef<OsStr>>(
     repo_path: &Path,
     package_manifest: PackageManifest,
     entrypoint: &str,
-    args: Vec<S>,
-) -> Result<ExitStatus> {
+    args: &[S],
+) -> Result<ExitReason> {
     let installed_path = &repo_path.join("installed").join(package_manifest.id);
 
     // Get all matching commands
@@ -60,11 +62,20 @@ pub fn start<S: AsRef<OsStr>>(
             }
         }
 
+        // Prepare the sandbox
+        let mut sandbox = Sandbox::create()?;
+        let exec = if let Some(root_path) = package_manifest.sandbox.root_dir {
+            sandbox.add_mount(Mount {
+                host_path: installed_path.to_owned(),
+                sandbox_path: root_path.clone(),
+            });
+            root_path.join(entrypoint)
+        } else {
+            installed_path.join(entrypoint)
+        };
+
         // Actually run the command
-        let status = Command::new(installed_path.join(entrypoint))
-            .args(args)
-            .envs(envs)
-            .status()?;
+        let status = sandbox.run_sandboxed(exec.as_os_str(), args, &envs)?;
 
         Ok(status)
     } else {
@@ -114,7 +125,7 @@ pub async fn install_package(
 mod tests {
     use super::*;
     use crate::chunks::save_tree;
-    use crate::repo::{Metadata, create_repo, insert_package};
+    use crate::repo::{Metadata, SandboxConfig, create_repo, insert_package};
     use std::fs;
     use temp_dir::TempDir;
 
@@ -153,6 +164,7 @@ mod tests {
             env: None,
             // TODO!
             build_hash: "TODO".to_string(),
+            sandbox: SandboxConfig::default(),
         };
 
         // Insert package

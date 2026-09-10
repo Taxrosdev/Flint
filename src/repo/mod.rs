@@ -240,6 +240,7 @@ mod tests {
             },
             env: None,
             build_hash: "Example Build Hash".to_string(),
+            sandbox: SandboxConfig::default(),
         };
 
         insert_package(&package_manifest, repo_path, Some(repo_path))?;

@@ -166,7 +166,7 @@ pub async fn run_cmd(
         &target_repo_path,
         package_manifest,
         &entrypoint,
-        args.unwrap_or_default(),
+        &args.unwrap_or_default(),
     )?;
 
     Ok(())
