@@ -57,9 +57,6 @@ network = ["dep:reqwest", "dep:flate2"]
 name = "flint"
 path = "src/main.rs"
 
-[lints.rust]
-unused_imports = "deny"
-
 [lints.clippy]
 all = "deny"
 correctness = "deny"
