@@ -31,7 +31,6 @@ pub async fn install_chunk(
     let hash = hash(hash_kind, &body);
 
     if hash == chunk.hash {
-        // TODO: POTENTIAL ISSUE IF MULTIPLE PROCESSES TRY INSTALLING SAME CHUNK!
         if tmp_chunk_path.exists() {
             fs::remove_file(&tmp_chunk_path)?;
         }

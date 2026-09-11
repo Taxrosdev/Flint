@@ -158,8 +158,7 @@ mod tests {
             chunks,
             commands: Vec::new(),
             env: None,
-            // TODO!
-            build_hash: "TODO".to_string(),
+            build_hash: "NOTAREALHASH".to_string(),
             sandbox: SandboxConfig::default(),
         };
 

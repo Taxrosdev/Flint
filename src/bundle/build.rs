@@ -71,7 +71,6 @@ mod tests {
         // Check that it's not empty
         assert!(!compressed.is_empty());
 
-        // TODO: decompress and check
         Ok(())
     }
 }
