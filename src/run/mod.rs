@@ -32,7 +32,13 @@ pub fn start<S: AsRef<OsStr>>(
     entrypoint: &str,
     args: &[S],
 ) -> Result<ExitReason> {
-    let installed_path = &repo_path.join("installed").join(package_manifest.id);
+    let installed_path = &repo_path.join("installed").join(&package_manifest.id);
+    if !installed_path.try_exists()? {
+        bail!(
+            "Package is not installed. Try using flint install {}",
+            package_manifest.id
+        )
+    }
 
     // Get all matching commands
     let matches: Vec<&PathBuf> = package_manifest
@@ -61,6 +67,14 @@ pub fn start<S: AsRef<OsStr>>(
                 *value = value.replace("./", &format!("{}/", installed_path.display()));
             }
         }
+
+        // Insert the INSTALL_PATH env.
+        // TODO: `envs` should be OsString anyways, which would allow this to work on machines with
+        // non-unicode paths
+        envs.insert(
+            "INSTALL_PATH".into(),
+            installed_path.clone().into_string().unwrap(),
+        );
 
         // Prepare the sandbox
         let mut sandbox = Sandbox::create()?;

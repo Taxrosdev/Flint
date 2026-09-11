@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, anyhow};
 use std::{
     collections::HashSet,
-    env::current_exe,
+    env::{current_exe, var_os},
     fs,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
@@ -17,6 +17,13 @@ use crate::repo::read_manifest;
 /// - Bad Repositories
 pub fn update_quicklaunch(repos_path: &Path, quicklaunch_path: &Path) -> Result<()> {
     let mut allowed = HashSet::new();
+    let executable_path = if let Some(env) = var_os("INSTALL_PATH") {
+        PathBuf::from(env).join("flint")
+    } else {
+        current_exe()
+            .with_context(|| "Could not get current executable path")?
+            .canonicalize()?
+    };
 
     for entry in repos_path.read_dir()? {
         let repo_path = entry?.path();
@@ -39,9 +46,6 @@ pub fn update_quicklaunch(repos_path: &Path, quicklaunch_path: &Path) -> Result<
                 let path = quicklaunch_path.join(command);
 
                 // generate quicklaunch script
-                let executable_path = current_exe()
-                    .with_context(|| "Could not get current executable path")?
-                    .canonicalize()?;
                 let quicklaunch_script = format!(
                     "#!/bin/bash\n{} run {} -- {} $@",
                     executable_path.display(),
@@ -68,6 +72,8 @@ pub fn update_quicklaunch(repos_path: &Path, quicklaunch_path: &Path) -> Result<
             fs::remove_file(file.path())?;
         }
     }
+
+    println!("Updated quicklaunch");
 
     Ok(())
 }
