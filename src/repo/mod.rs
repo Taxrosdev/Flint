@@ -124,14 +124,14 @@ pub fn remove_package(
 /// - Repository doesn't exist
 /// - ID doesn't exist inside the Repository
 pub fn get_package(repo_manifest: &RepoManifest, package_id: &str) -> Result<PackageManifest> {
-    // Check ID's and aliases
-    for package in &repo_manifest.packages {
-        if package.id == package_id || package.aliases.contains(&package_id.to_string()) {
-            return Ok(package.to_owned());
-        }
-    }
-
-    bail!("Could not find package '{package_id}' found in Repository.");
+    repo_manifest
+        .packages
+        .iter()
+        .find(|package| package.matches_id(package_id))
+        .cloned()
+        .ok_or_else(|| {
+            anyhow::anyhow!("Could not find package '{package_id}' found in Repository.")
+        })
 }
 
 /// Gets an installed package manifest from a repository.
@@ -147,7 +147,7 @@ pub fn get_installed_package(repo_path: &Path, id: &str) -> Result<PackageManife
 
     // Check ID's and aliases
     for package in repo_manifest.packages {
-        if package.id == id || package.aliases.contains(&id.to_string()) {
+        if package.matches_id(id) {
             let installed_path = repo_path
                 .join("installed")
                 .join(&package.id)
@@ -175,14 +175,8 @@ pub fn get_installed_package(repo_path: &Path, id: &str) -> Result<PackageManife
 /// - Repository doesn't exist
 pub fn get_all_packages(repo_path: &Path) -> Result<Vec<PackageManifest>> {
     let repo_manifest = read_manifest(repo_path)?;
-    let mut packages = Vec::new();
 
-    // Check ID's and aliases
-    for package in repo_manifest.packages {
-        packages.push(package);
-    }
-
-    Ok(packages)
+    Ok(repo_manifest.packages)
 }
 
 /// Lists all installed packages from a repository.

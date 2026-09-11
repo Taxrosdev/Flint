@@ -28,6 +28,14 @@ pub struct PackageManifest {
     pub sandbox: SandboxConfig,
 }
 
+impl PackageManifest {
+    /// Whether this package is matched by `id`, either directly or via an alias.
+    #[must_use]
+    pub fn matches_id(&self, id: &str) -> bool {
+        self.id == id || self.aliases.iter().any(|alias| alias == id)
+    }
+}
+
 /// All of these are user visible, and should carry no actual weight.
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Metadata {
