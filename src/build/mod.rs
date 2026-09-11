@@ -56,10 +56,18 @@ pub struct BuildManifest {
     sandbox: SandboxConfig,
 }
 
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+enum SourceKind {
+    Git,
+    #[cfg(feature = "network")]
+    Tar,
+    Local,
+}
+
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 struct Source {
-    /// Should either be git, tar or local
-    kind: String,
+    kind: SourceKind,
     /// URL to the source.
     url: String,
     /// Path to extract.

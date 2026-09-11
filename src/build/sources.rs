@@ -1,4 +1,4 @@
-use crate::build::Source;
+use crate::build::{Source, SourceKind};
 use anyhow::Context;
 use anyhow::Result;
 use std::fs;
@@ -10,25 +10,50 @@ use walkdir::WalkDir;
 
 pub async fn get_sources(path: &Path, source_path: &Path, sources: &[Source]) -> Result<()> {
     for source in sources {
-        match source.kind.as_str() {
-            "git" => pull_git(source, path).with_context(|| {
+        match source.kind {
+            SourceKind::Git => pull_git(source, path).with_context(|| {
                 format!("Failed to pull git repo from {}", source_path.display())
             })?,
 
             #[cfg(feature = "network")]
-            "tar" => pull_tar(source, path).await.with_context(|| {
+            SourceKind::Tar => pull_tar(source, path).await.with_context(|| {
                 format!(
                     "Failed to extract tar archive from {}",
                     source_path.display()
                 )
             })?,
 
-            "local" => pull_local(source_path, path).with_context(|| {
+            SourceKind::Local => pull_local(source_path, path).with_context(|| {
                 format!("Failed to copy local source from {}", source_path.display())
             })?,
-            _ => {
-                unimplemented!("No handler is implemented for source.kind.{}", source.kind)
+        }
+    }
+
+    Ok(())
+}
+
+/// `move_files` will just move instead of copying.
+fn copy_tree(source: &Path, target: &Path, move_files: bool) -> Result<()> {
+    for entry in WalkDir::new(source) {
+        let entry = entry?;
+        let relative_path = entry.path().strip_prefix(source)?;
+        let output = if relative_path.as_os_str().is_empty() {
+            target.to_path_buf()
+        } else {
+            target.join(relative_path)
+        };
+
+        match entry.file_type() {
+            file_type if file_type.is_dir() => fs::create_dir_all(output)?,
+            file_type if file_type.is_file() || file_type.is_symlink() => {
+                fs::create_dir_all(output.parent().context("File has no parent")?)?;
+                if move_files {
+                    fs::rename(entry.path(), output)?;
+                } else {
+                    fs::copy(entry.path(), output)?;
+                }
             }
+            _ => {} // Impossible
         }
     }
 
@@ -47,20 +72,7 @@ fn pull_local(source_path: &Path, target_path: &Path) -> Result<()> {
     fs::create_dir_all(target_path)
         .with_context(|| format!("Failed to create target dir {}", target_path.display()))?;
 
-    // Copy recursively
-    for entry in walkdir::WalkDir::new(source_path) {
-        let entry = entry?;
-        let rel_path = entry.path().strip_prefix(source_path)?;
-        let dest = target_path.join(rel_path);
-
-        if entry.file_type().is_dir() {
-            fs::create_dir_all(&dest)?;
-        } else {
-            fs::copy(entry.path(), &dest)?;
-        }
-    }
-
-    Ok(())
+    copy_tree(source_path, target_path, false)
 }
 
 /// Clone or pull a git repo depending on whether it already exists.
@@ -93,70 +105,27 @@ fn pull_git(source: &Source, target_path: &Path) -> Result<()> {
 
 /// Extract tar contents to target dir without the toplevel dir
 fn unwrap_tar_contents(temp_dir: &Path, target_path: &Path) -> Result<()> {
-    // Check if there's a single top-level directory
-    let entries: Vec<_> = fs::read_dir(temp_dir)?
-        .filter_map(std::result::Result::ok)
-        .collect();
+    let entries: Vec<_> = fs::read_dir(temp_dir)?.collect::<std::io::Result<_>>()?;
 
-    // If only a single dir, lets "unwrap" the tar
-    if entries.len() == 1 {
-        let entry = &entries[0];
-
-        if entry.file_type()?.is_dir() {
-            let source_dir = entry.path();
-
-            for file in WalkDir::new(&source_dir) {
-                let file = file?;
-                let file_path = file.path();
-                let relative_path = file_path.strip_prefix(&source_dir)?;
-                let destination_path = target_path.join(relative_path);
-
-                if file.file_type().is_file() {
-                    if let Some(parent) = destination_path.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
-
-                    fs::rename(file_path, destination_path)?;
-                }
-            }
-        } else {
-            // incase your tar'ing a single file... strange.
+    match entries.as_slice() {
+        [entry] if entry.file_type()?.is_dir() => copy_tree(&entry.path(), target_path, true),
+        [entry] => {
             let source_file = entry.path();
             let file_name = source_file.file_name().unwrap();
-            let dest_path = target_path.join(file_name);
 
-            fs::copy(&source_file, &dest_path)?;
+            copy_tree(&source_file, &target_path.join(file_name), false)
         }
-    } else {
-        // Typical no unwrapping
-        for entry in entries {
-            let source_path = entry.path();
-            let file_name = source_path.file_name().unwrap();
-            let destination_path = target_path.join(file_name);
+        entries => {
+            for entry in entries {
+                let source_path = entry.path();
+                let file_name = source_path.file_name().unwrap();
+                let destination_path = target_path.join(file_name);
 
-            if entry.file_type()?.is_dir() {
-                // Copy directory recursively
-                for file in WalkDir::new(&source_path) {
-                    let file = file?;
-                    let file_path = file.path();
-                    let relative_path = file_path.strip_prefix(&source_path)?;
-                    let extract_path = destination_path.join(relative_path);
-
-                    if file.file_type().is_file() {
-                        if let Some(parent) = extract_path.parent() {
-                            fs::create_dir_all(parent)?;
-                        }
-
-                        fs::copy(file_path, extract_path)?;
-                    }
-                }
-            } else {
-                fs::copy(&source_path, &destination_path)?;
+                copy_tree(&source_path, &destination_path, false)?;
             }
+            Ok(())
         }
     }
-
-    Ok(())
 }
 
 #[cfg(feature = "network")]
