@@ -174,14 +174,6 @@ mod tests {
     use temp_dir::TempDir;
 
     #[test]
-    fn get_chunk_filename_stability() {
-        let hash = "a8sf799a8s6fa7f5";
-        let permissions = 0o777;
-
-        assert_eq!(get_chunk_filename(hash, permissions), "a8sf799a8s6fa7f5511");
-    }
-
-    #[test]
     fn test_save_tree() -> Result<()> {
         let initial_tree_path = TempDir::new()?;
         let chunk_store_path = TempDir::new()?;

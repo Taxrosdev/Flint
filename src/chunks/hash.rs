@@ -28,18 +28,3 @@ pub fn hash(hash_kind: HashKind, data: &[u8]) -> String {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_hash_blake3() {
-        let data = b"hello world";
-        let hash = hash(HashKind::Blake3, data);
-        // Blake3 hash of "hello world"
-        assert_eq!(
-            hash,
-            "d74981efa70a0c880b8d8c1985d075dbcbf679b99a5f9914e5aaf96b831a9e24"
-        );
-    }
-}

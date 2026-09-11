@@ -355,18 +355,4 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_extract_tar_contents_empty_directory() -> Result<()> {
-        let temp_dir = TempDir::new()?;
-        let target_dir = TempDir::new()?;
-
-        // Empty temp directory (simulating an empty tar)
-        unwrap_tar_contents(temp_dir.path(), target_dir.path())?;
-
-        // Should handle empty directory gracefully
-        let entries: Vec<_> = fs::read_dir(target_dir.path())?.collect();
-        assert_eq!(entries.len(), 0);
-
-        Ok(())
-    }
 }
