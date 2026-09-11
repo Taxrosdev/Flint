@@ -6,11 +6,14 @@ metadata:
   name: "Flintpkg"
   description: "The universal package manager"
   license: "MIT or APACHE-2.0"
-  homepage_url: "https://github.com/TimelessOS/Flint"
+  homepage_url: "https://github.com/Taxrosdev/Flint"
 
 output: target/release/flint
 build_script: build.sh
 commands: ["flint"]
+
+sandbox:
+  root_dir: /tmp/flint-runtime
 
 sources:
   - kind: local
