@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, ffi::OsString, path::PathBuf};
 
 use crate::chunks::{Chunk, HashKind};
 
@@ -20,7 +20,7 @@ pub struct PackageManifest {
     pub chunks: Vec<Chunk>,
     pub commands: Vec<PathBuf>,
     /// Runtime environment variables
-    pub env: Option<HashMap<String, String>>,
+    pub env: Option<HashMap<OsString, OsString>>,
     #[serde(default = "build_hash_default")]
     pub build_hash: String,
 

@@ -4,6 +4,7 @@ mod sources;
 use anyhow::{Context, Result, bail};
 use std::{
     collections::HashMap,
+    ffi::OsString,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -142,7 +143,12 @@ impl BuildManifest {
 
         get_sources(build_dir.path(), search_path, &self.sources).await?;
 
-        let mut envs = self.env.clone();
+        let mut envs = self
+            .env
+            .clone()
+            .into_iter()
+            .map(|(k, v)| (OsString::from(k), OsString::from(v)))
+            .collect();
 
         include_all(
             self.include.iter().chain(self.sdks.iter()).collect(),
@@ -223,7 +229,7 @@ fn include_all(
     build_dir: &Path,
     repo_path: &Path,
     chunk_store_path: &Path,
-    envs: &mut HashMap<String, String>,
+    envs: &mut HashMap<OsString, OsString>,
 ) -> Result<()> {
     for dependency in packages {
         let result = include(
@@ -248,7 +254,7 @@ fn include(
     path_to_include_at: &Path,
     repo_path: &Path,
     chunk_store_path: &Path,
-) -> Result<HashMap<String, String>> {
+) -> Result<HashMap<OsString, OsString>> {
     let dependency_build_manifest_path = search_path.join(dependency);
     let dependency_build_manifest: BuildManifest =
         serde_yaml::from_str(&fs::read_to_string(dependency_build_manifest_path)?)?;
@@ -269,7 +275,7 @@ fn run_script(
     cwd: PathBuf,
     search_path: &Path,
     script: &Path,
-    envs: &HashMap<String, String>,
+    envs: &HashMap<OsString, OsString>,
     sandboxed: bool,
 ) -> Result<()> {
     let script_path = search_path.join(script);

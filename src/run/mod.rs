@@ -4,7 +4,7 @@ pub mod sandbox;
 use anyhow::{Context, Result, bail};
 use std::{
     collections::HashMap,
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     path::{Path, PathBuf},
 };
 
@@ -53,28 +53,10 @@ pub fn start<S: AsRef<OsStr>>(
         let entrypoint = entrypoint.to_string_lossy();
         let entrypoint: &str = entrypoint.trim_start_matches('/');
 
-        let mut envs: HashMap<String, String> = package_manifest.env.unwrap_or_default();
-
-        // I hate I have to do this.
-        let keys_to_update: Vec<String> = envs
-            .iter()
-            .filter(|(_, v)| v.contains("./"))
-            .map(|(k, _)| k.clone())
-            .collect();
-
-        for key in keys_to_update {
-            if let Some(value) = envs.get_mut(&key) {
-                *value = value.replace("./", &format!("{}/", installed_path.display()));
-            }
-        }
+        let mut envs: HashMap<OsString, OsString> = package_manifest.env.unwrap_or_default();
 
         // Insert the INSTALL_PATH env.
-        // TODO: `envs` should be OsString anyways, which would allow this to work on machines with
-        // non-unicode paths
-        envs.insert(
-            "INSTALL_PATH".into(),
-            installed_path.clone().into_string().unwrap(),
-        );
+        envs.insert("INSTALL_PATH".into(), installed_path.into());
 
         // Prepare the sandbox
         let mut sandbox = Sandbox::create()?;
